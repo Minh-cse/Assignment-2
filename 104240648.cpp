@@ -2,12 +2,13 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cctype>
 #define MAX_GRAPH 10
 #define MAX_VERTEX 100
 #define MAX_EDGE 1000
 #define INF 10e9
 using namespace std;
-
+bool isOnlyInt(const string& expr);
 struct Vertex {
     string name;
     int cycleTime;
@@ -21,8 +22,9 @@ struct Graph {
     int numVertex;
     int numEdge;
     Vertex vertices[MAX_VERTEX];
-    vector<Edge> edges;
+    vector<Edge> edgesHolder;
 };
+
 int main(int argc, char* argv[]) {
     if (argc != 3) {
         cout << "Use 104240648 tests.txt output_104240648.txt\n";
@@ -41,7 +43,6 @@ int main(int argc, char* argv[]) {
 
     
     Graph graphs[MAX_GRAPH];
-    Edge edges[MAX_EDGE];
     for (int i = 0; i < numGraph; i++) {
         if (i == 0 || graphs[i].numVertex == 0){
             fin >> graphs[i].numVertex;
@@ -65,9 +66,10 @@ int main(int argc, char* argv[]) {
             e.start = line.substr(0, pos1);
             e.end = line.substr(pos1 + 2, pos2 - pos1 - 2);
             e.travelTime = stoi(line.substr(pos2 + 2));
-            graphs[i].edges.push_back(e);
+            graphs[i].edgesHolder.push_back(e);
         }
     }
+    
     fin.close();
     fout.close();
     return 0;
@@ -81,3 +83,16 @@ bool isOnlyInt(const string& line) {
     }
     return true;
 }
+// for (int i = 0; i < numGraph; i++) {
+    //     cout << "Graph " << i + 1 << ":\n";
+    //     cout << "Vertices:\n";
+    //     for (int j = 0; j < graphs[i].numVertex; j++)
+    //         cout << graphs[i].vertices[j].name
+    //              << " - cycle: " << graphs[i].vertices[j].cycleTime << "\n";
+    //     cout << "Edges:\n";
+    //     for (int k = 0; k < graphs[i].edgesHolder.size(); k++) {
+    //         cout << graphs[i].edgesHolder[k].start << " -> " 
+    //      << graphs[i].edgesHolder[k].end << " : " 
+    //      << graphs[i].edgesHolder[k].travelTime << "\n";
+    //     }
+    // }
