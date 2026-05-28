@@ -1,18 +1,53 @@
-// StudentID.cpp
-#include <bits/stdc++.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <cctype>
+
+#define MAX_GRAPH 10
+#define MAX_VERTEX 100
+
 using namespace std;
 
-typedef long long ll;
-const ll INF = 1e18;
+const long long INF = 1000000000000000000LL;
 
-// ==================== Custom Min-Heap Priority Queue ====================
-struct Node {
-    ll time;
-    string vertex;
-    bool operator>(const Node& other) const {
-        return time > other.time;
-    }
+struct Vertex {
+    string name;
+    int cycleTime;
 };
+
+struct Edge {
+    string start;
+    string end;
+    int travelTime;
+};
+
+struct AdjEdge {
+    int to;
+    int travelTime;
+};
+
+struct Graph {
+    int numVertex = 0;
+    Vertex vertices[MAX_VERTEX];
+    vector<Edge> edgesHolder;
+};
+
+struct Node {
+    int vertexIdx;
+    long long dist;
+};
+
+struct Result {
+    long long shortestTime;
+    vector<int> path;
+};
+
+void swapNode(Node& a, Node& b) {
+    Node temp = a;
+    a = b;
+    b = temp;
+}
 
 class MinHeap {
 private:
@@ -21,178 +56,314 @@ private:
     void heapifyUp(int idx) {
         while (idx > 0) {
             int parent = (idx - 1) / 2;
-            if (heap[idx].time >= heap[parent].time) break;
-            swap(heap[idx], heap[parent]);
+
+            if (heap[idx].dist >= heap[parent].dist) {
+                break;
+            }
+
+            swapNode(heap[idx], heap[parent]);
             idx = parent;
         }
     }
 
     void heapifyDown(int idx) {
         int n = heap.size();
+
         while (true) {
             int left = 2 * idx + 1;
             int right = 2 * idx + 2;
             int smallest = idx;
 
-            if (left < n && heap[left].time < heap[smallest].time)
+            if (left < n && heap[left].dist < heap[smallest].dist) {
                 smallest = left;
-            if (right < n && heap[right].time < heap[smallest].time)
-                smallest = right;
+            }
 
-            if (smallest == idx) break;
-            swap(heap[idx], heap[smallest]);
+            if (right < n && heap[right].dist < heap[smallest].dist) {
+                smallest = right;
+            }
+
+            if (smallest == idx) {
+                break;
+            }
+
+            swapNode(heap[idx], heap[smallest]);
             idx = smallest;
         }
     }
 
 public:
-    void push(ll time, string v) {
-        heap.push_back({time, v});
+    void push(int vertexIdx, long long dist) {
+        heap.push_back({vertexIdx, dist});
         heapifyUp(heap.size() - 1);
     }
 
     Node pop() {
-        if (heap.empty()) return {INF, ""};
+        if (heap.empty()) {
+            return {-1, INF};
+        }
+
         Node top = heap[0];
+
         heap[0] = heap.back();
         heap.pop_back();
-        if (!heap.empty()) heapifyDown(0);
+
+        if (!heap.empty()) {
+            heapifyDown(0);
+        }
+
         return top;
     }
 
-    bool empty() const {
+    bool isEmpty() const {
         return heap.empty();
     }
 };
-// =====================================================================
 
-struct Edge {
-    string to;
-    ll w;
-};
+string trim(const string& s) {
+    int left = 0;
+    int right = s.length() - 1;
+
+    while (left <= right && isspace(s[left])) {
+        left++;
+    }
+
+    while (right >= left && isspace(s[right])) {
+        right--;
+    }
+
+    if (left > right) {
+        return "";
+    }
+
+    return s.substr(left, right - left + 1);
+}
+
+bool isOnlyInt(const string& line) {
+    if (line.empty()) {
+        return false;
+    }
+
+    for (char c : line) {
+        if (!isdigit(c) && c != ' ' && c != '\t' && c != '\r') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int findVertexIndex(Graph& g, const string& name) {
+    for (int i = 0; i < g.numVertex; i++) {
+        if (g.vertices[i].name == name) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+Result dijkstra(Graph& g, string startName, string targetName) {
+    vector<AdjEdge> adj[MAX_VERTEX];
+
+    for (int i = 0; i < g.edgesHolder.size(); i++) {
+        Edge e = g.edgesHolder[i];
+
+        int u = findVertexIndex(g, e.start);
+        int v = findVertexIndex(g, e.end);
+
+        if (u != -1 && v != -1) {
+            adj[u].push_back({v, e.travelTime});
+            adj[v].push_back({u, e.travelTime}); 
+        }
+    }
+
+    int start = findVertexIndex(g, startName);
+    int target = findVertexIndex(g, targetName);
+
+    Result result;
+    result.shortestTime = -1;
+
+    if (start == -1 || target == -1) {
+        return result;
+    }
+
+    long long dist[MAX_VERTEX];
+    int parent[MAX_VERTEX];
+
+    for (int i = 0; i < g.numVertex; i++) {
+        dist[i] = INF;
+        parent[i] = -1;
+    }
+
+    dist[start] = 0;
+
+    MinHeap pq;
+    pq.push(start, 0);
+
+    while (!pq.isEmpty()) {
+        Node cur = pq.pop();
+
+        int u = cur.vertexIdx;
+        long long currentDist = cur.dist;
+
+        if (u == -1) {
+            break;
+        }
+
+        if (currentDist != dist[u]) {
+            continue;
+        }
+
+        for (int i = 0; i < adj[u].size(); i++) {
+            int v = adj[u][i].to;
+            int travelTime = adj[u][i].travelTime;
+
+            long long wait = 0;
+
+            if (dist[u] > 30) {
+                int cycle = g.vertices[u].cycleTime;
+
+                if (cycle > 0) {
+                    wait = (cycle - dist[u] % cycle) % cycle;
+                }
+            }
+
+            long long newDist = dist[u] + wait + travelTime;
+
+            if (newDist < dist[v]) {
+                dist[v] = newDist;
+                parent[v] = u;
+                pq.push(v, newDist);
+            }
+        }
+    }
+
+    if (dist[target] == INF) {
+        result.shortestTime = -1;
+        return result;
+    }
+
+    result.shortestTime = dist[target];
+
+    vector<int> reversedPath;
+
+    int current = target;
+
+    while (current != -1) {
+        reversedPath.push_back(current);
+        current = parent[current];
+    }
+
+    for (int i = reversedPath.size() - 1; i >= 0; i--) {
+        result.path.push_back(reversedPath[i]);
+    }
+
+    return result;
+}
+
+void printResult(Graph& g, Result result, ostream& out) {
+    out << result.shortestTime << endl;
+
+    if (result.shortestTime == -1) {
+        out << "No path" << endl;
+        return;
+    }
+
+    for (int i = 0; i < result.path.size(); i++) {
+        int vertexIdx = result.path[i];
+
+        out << g.vertices[vertexIdx].name;
+
+        if (i != result.path.size() - 1) {
+            out << " ";
+        }
+    }
+
+    out << endl;
+}
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        cout << "Usage: " << argv[0] << " tests.txt output_StudentID.txt\n";
+    if (argc != 3) {
+        cout << "Use: 104240648 tests.txt output_104240648.txt\n";
         return 1;
     }
 
-    ifstream in(argv[1]);
-    ofstream out(argv[2]);
+    ifstream fin(argv[1]);
+    ofstream fout(argv[2]);
 
-    if (!in.is_open()) {
-        cout << "Cannot open input file!\n";
+    if (!fin) {
+        cout << "Cannot open input file\n";
         return 1;
     }
 
-    int m;
-    in >> m;
-
-    for (int graph = 0; graph < m; ++graph) {
-        int n;
-        in >> n;
-
-        map<string, ll> cycle;
-        vector<string> vertices(n);
-
-        for (int i = 0; i < n; ++i) {
-            string v, comma;
-            ll t;
-            in >> v >> comma >> t;
-            if (!v.empty() && v.back() == ',') v.pop_back();
-            cycle[v] = t;
-            vertices[i] = v;
-        }
-
-        // Build graph
-        map<string, vector<Edge>> adj;
-        for (int i = 0; i < n; ++i) {
-            string u, v, comma;
-            ll w;
-            while (true) {
-                if (in.eof()) break;
-                char ch = in.peek();
-                if (isdigit(ch)) break; // next graph starts with number
-                string line;
-                getline(in, line);
-                if (line.empty()) continue;
-                stringstream ss(line);
-                if (!(ss >> u)) continue;
-                if (!u.empty() && u.back() == ',') u.pop_back();
-                ss >> v >> comma >> w;
-                if (!v.empty() && v.back() == ',') v.pop_back();
-
-                if (cycle.count(u) && cycle.count(v)) {
-                    adj[u].push_back({v, w});
-                    adj[v].push_back({u, w});
-                }
-            }
-        }
-
-        string source = vertices[0];
-        string target = vertices.back();
-
-        // Dijkstra with custom heap
-        map<string, ll> dist;
-        map<string, string> parent;
-        for (auto& p : cycle) dist[p.first] = INF;
-        dist[source] = 0;
-
-        MinHeap pq;
-        pq.push(0, source);
-
-        while (!pq.empty()) {
-            Node curr = pq.pop();
-            ll time = curr.time;
-            string u = curr.vertex;
-
-            if (time > dist[u]) continue;
-
-            // Waiting logic
-            ll depart = time;
-            if (time > 30) {
-                ll t = cycle[u];
-                depart = ((time + t - 1) / t) * t;
-            }
-
-            for (auto& e : adj[u]) {
-                ll arrival = depart + e.w;
-                if (arrival < dist[e.to]) {
-                    dist[e.to] = arrival;
-                    parent[e.to] = u;
-                    pq.push(arrival, e.to);
-                }
-            }
-        }
-
-        ll shortestTime = dist[target];
-
-        // Reconstruct path
-        vector<string> path;
-        string cur = target;
-        while (!cur.empty()) {
-            path.push_back(cur);
-            if (cur == source) break;
-            cur = parent[cur];
-        }
-        reverse(path.begin(), path.end());
-
-        // Output
-        cout << shortestTime << endl;
-        out << shortestTime << endl;
-
-        for (size_t i = 0; i < path.size(); ++i) {
-            if (i > 0) {
-                cout << " ";
-                out << " ";
-            }
-            cout << path[i];
-            out << path[i];
-        }
-        cout << endl;
-        out << endl;
+    if (!fout) {
+        cout << "Cannot open output file\n";
+        return 1;
     }
 
-    cout << "Done! Output written to " << argv[2] << endl;
+    int numGraph;
+    fin >> numGraph;
+    fin.ignore(100, '\n');
+
+    Graph graphs[MAX_GRAPH];
+
+    for (int i = 0; i < numGraph; i++) {
+        if (graphs[i].numVertex == 0) {
+            fin >> graphs[i].numVertex;
+            fin.ignore(100, '\n');
+        }
+
+        for (int j = 0; j < graphs[i].numVertex; j++) {
+            string line;
+            getline(fin, line);
+
+            int pos = line.find(',');
+
+            graphs[i].vertices[j].name = trim(line.substr(0, pos));
+            graphs[i].vertices[j].cycleTime = stoi(trim(line.substr(pos + 1)));
+        }
+
+        string line;
+
+        while (getline(fin, line)) {
+            line = trim(line);
+
+            if (line.empty()) {
+                continue;
+            }
+
+            if (isOnlyInt(line)) {
+                if (i + 1 < numGraph) {
+                    graphs[i + 1].numVertex = stoi(line);
+                }
+                break;
+            }
+
+            int pos1 = line.find(',');
+            int pos2 = line.find(',', pos1 + 1);
+
+            Edge e;
+
+            e.start = trim(line.substr(0, pos1));
+            e.end = trim(line.substr(pos1 + 1, pos2 - pos1 - 1));
+            e.travelTime = stoi(trim(line.substr(pos2 + 1)));
+
+            graphs[i].edgesHolder.push_back(e);
+        }
+    }
+
+    for (int i = 0; i < numGraph; i++) {
+        string start = graphs[i].vertices[0].name;
+        string target = graphs[i].vertices[graphs[i].numVertex - 1].name;
+
+        Result result = dijkstra(graphs[i], start, target);
+
+        printResult(graphs[i], result, fout);
+        printResult(graphs[i], result, cout);
+    }
+
+    fin.close();
+    fout.close();
+
     return 0;
 }
