@@ -30,6 +30,10 @@ struct Node {
     int vertexIdx;
     long long dist;
 };
+struct Result {
+    long long shortestTime;
+    vector<int> path;
+};
 void swapNode(Node & a, Node & b) {
     Node temp = a;
     a = b;
@@ -43,7 +47,9 @@ private:
     void heapifyUp(int idx) {
         while (idx > 0) {
             int parent = (idx - 1) / 2;
-            if (heap[idx].dist >= heap[parent].dist) {break;}
+            if (heap[idx].dist >= heap[parent].dist){
+                break;
+            }
             swapNode(heap[idx], heap[parent]);
             idx = parent;
         }
@@ -55,11 +61,17 @@ private:
             int right = 2 * idx + 2;
             int smallest = idx;
 
-            if (left < n && heap[left].dist < heap[smallest].dist)
-                {smallest = left;}
-            if (right < n && heap[right].dist < heap[smallest].dist)
-                {smallest = right;}
-            if (smallest == idx) {break;}
+            if (left < n && heap[left].dist < heap[smallest].dist){
+                smallest = left;
+            }
+
+            if (right < n && heap[right].dist < heap[smallest].dist){
+                smallest = right;
+            }
+
+            if (smallest == idx) {
+                break;
+            }
             swapNode(heap[idx], heap[smallest]);
             idx = smallest;
         }
@@ -69,14 +81,20 @@ public:
         heap.push_back({vertexIdx, dist});
         heapifyUp(heap.size() - 1 );
     }
+    
     Node pop() {
-        if (heap.empty()) {return {INF, -1};}
+        if (heap.empty()) {
+            return {INF, -1};
+        }
+
         Node top = heap[0];
 
         heap[0] = heap.back();
         heap.pop_back();
-        heap.pop_back();
-        if (!heap.empty()) {heapifyDown(0);}
+        
+        if (!heap.empty()) {
+            heapifyDown(0);
+        }
         return top;
     }
     bool isEmpty() const {
@@ -93,12 +111,16 @@ string trim(const string& s) {
     while (left <= right && isspace(s[right])) {
         right--;
     }
-    if (left > right) {return ""; }
+    if (left > right) {
+        return ""; 
+    }
 
     return s.substr(left, right - left + 1);
 }
 bool isOnlyInt(const string& line) {
-    if (line.empty()) {return false;}
+    if (line.empty()) {
+        return false;
+    }
     for (char c: line) {
         if (!isdigit(c) && c != ' ' && c != '\t' && c != '\r') {
             return false;
@@ -108,31 +130,42 @@ bool isOnlyInt(const string& line) {
 }
 int findVertexIndex(Graph& g, const string& name) {
     for (int i = 0; i < g.numVertex; i++) {
-        if(g.vertices[i].name == name) {return i;}
+        if (g.vertices[i].name == name) {
+            return i;
+        }
     }
     return -1;
 }
 
-long long dijkstra(Graph& g, string startName, string targetName) {
+Result dijkstra(Graph& g, string startName, string targetName) {
     vector<AdjEdge> adj[MAX_EDGE];
 
-    for (Edge e : g.edgesHolder) {
+    for (int i = 0; i < g.edgesHolder.size(); i++) {
+        Edge e = g.edgesHolder[i];
+
         int u = findVertexIndex(g, e.start);
         int v = findVertexIndex(g, e.end);
 
         if (u != -1 && v != -1) {
             adj[u].push_back({v, e.travelTime});
+            adj[v].push_back({u, e.travelTime});
         }
     }
     int start = findVertexIndex(g, startName);
     int target = findVertexIndex(g, targetName);
 
-    if (start == -1 || target == -1) {return -1;}
+    Result result;
+    result.shortestTime = -1;
+    if (start == -1 || target == -1) {
+        return result;
+    }
 
     long long dist[MAX_VERTEX];
+    int parent[MAX_VERTEX];
 
     for (int i = 0; i< g.numVertex; i++) {
         dist[i] = INF;
+        parent[i] = -1;
     }
 
     dist[start] = 0;
@@ -146,21 +179,26 @@ long long dijkstra(Graph& g, string startName, string targetName) {
         int u = current.vertexIdx;
         long long currentDist = current.dist;
 
-        if (u == -1) {break;}
+        if (u == -1) {
+            break;
+        }
         
-        if (currentDist != dist[u]) {continue;}
-        
-        if (u == target) {return dist[u];}
+        if (currentDist != dist[u]) {
+            continue;
+        }
 
-        for (AdjEdge edge : adj[u]) {
-            int v = edge.to;
-            int travelTime = edge.travelTime;
+        for (int i  = 0; i < adj[u].size(); i++) {
+            int v = adj[u][i].to;
+            int travelTime = adj[u][i].travelTime;
 
             long long wait = 0;
-            int cycle = g.vertices[u].cycleTime;
 
-            if (cycle > 0) {
-                wait = (cycle - dist[u] % cycle) % cycle;
+            if (dist[u] > 30) {
+                int cycle = g.vertices[u].cycleTime;
+
+                if(cycle > 0) {
+                    wait = (cycle - dist[u] % cycle) % cycle;
+                }
             }
 
             long long newDist = dist[u] + wait + travelTime;
@@ -168,10 +206,55 @@ long long dijkstra(Graph& g, string startName, string targetName) {
             if (newDist < dist[v]) {
                 dist[v] = newDist;
                 pq.push(v, newDist);
+                parent[v] = u;
+                pq.push(v, newDist);
             }
         }
     }
-    return -1;
+    if (dist[target] == INF) {
+        result.shortestTime = -1;
+        return result;
+    }
+
+    result.shortestTime = dist[target];
+
+    vector<int> reversedPath;
+
+    int current = target;
+    
+    while (current != -1) {
+        reversedPath.push_back(current);
+        current = parent[current];
+    }
+    for (int i  = reversedPath.size() -1 ; i >= 0; i--) {
+        result.path.push_back(reversedPath[i]);
+    }
+    return result;
+}
+
+void printResult(Graph& g, Result result, ostream& out, bool isLastGraph) {
+    out << result.shortestTime << endl;
+
+    if (result.shortestTime == -1) {
+        out << "No path" << endl;
+        if (!isLastGraph) {
+            cout << endl;
+        }
+        return;
+    }
+
+    for (int i = 0; i < result.path.size(); i++) {
+        int vertexIdx = result.path[i];
+
+        out << g.vertices[vertexIdx].name;
+
+        if (i != result.path.size() - 1) {
+            out << " ";
+        }
+    }
+    if (!isLastGraph) {
+        out << endl;
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -229,9 +312,11 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < numGraph; i++) {
         string start = graphs[i].vertices[0].name;
         string target = graphs[i].vertices[graphs[i].numVertex - 1].name;
-
-        long result = dijkstra(graphs[i], start, target);
-        fout << result << endl;
+        bool isLastGraph = (i == numGraph - 1);
+        Result result = dijkstra(graphs[i], start, target);
+        
+        printResult(graphs[i], result, fout, isLastGraph);
+        printResult(graphs[i], result, cout, isLastGraph);
     }
 
     

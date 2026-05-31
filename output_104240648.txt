@@ -1,0 +1,20 @@
+16
+A B D F G
+9
+A B D E G
+11
+A C D E
+14
+A B D F
+12
+A C D
+12
+A B E G H
+6
+A C E F
+9
+A B D E
+13
+A C F G
+7
+A B D
