@@ -5,7 +5,7 @@
 #include <cctype>
 #define MAX_GRAPH 10
 #define MAX_VERTEX 100
-#define MAX_EDGE 1000
+
 const long long INF = 1LL << 18;
 using namespace std;
 struct Vertex {
@@ -97,6 +97,7 @@ public:
         }
         return top;
     }
+    
     bool isEmpty() const {
         return heap.empty();
     }
@@ -138,7 +139,7 @@ int findVertexIndex(Graph& g, const string& name) {
 }
 
 Result dijkstra(Graph& g, string startName, string targetName) {
-    vector<AdjEdge> adj[MAX_EDGE];
+    vector<AdjEdge> adj[MAX_VERTEX];
 
     for (int i = 0; i < g.edgesHolder.size(); i++) {
         Edge e = g.edgesHolder[i];
@@ -151,20 +152,21 @@ Result dijkstra(Graph& g, string startName, string targetName) {
             adj[v].push_back({u, e.travelTime});
         }
     }
+
     int start = findVertexIndex(g, startName);
     int target = findVertexIndex(g, targetName);
 
     Result result;
     result.shortestTime = -1;
     if (start == -1 || target == -1) {
-        return result;
+        return result; 
     }
 
-    long long dist[MAX_VERTEX];
+    long long dist[MAX_VERTEX]; 
     int parent[MAX_VERTEX];
 
-    for (int i = 0; i< g.numVertex; i++) {
-        dist[i] = INF;
+    for (int i = 0; i< g.numVertex; i++) { 
+        dist[i] = INF; 
         parent[i] = -1;
     }
 
@@ -188,7 +190,7 @@ Result dijkstra(Graph& g, string startName, string targetName) {
         }
 
         for (int i  = 0; i < adj[u].size(); i++) {
-            int v = adj[u][i].to;
+            int v = adj[u][i].to; 
             int travelTime = adj[u][i].travelTime;
 
             long long wait = 0;
@@ -205,7 +207,6 @@ Result dijkstra(Graph& g, string startName, string targetName) {
 
             if (newDist < dist[v]) {
                 dist[v] = newDist;
-                pq.push(v, newDist);
                 parent[v] = u;
                 pq.push(v, newDist);
             }
@@ -226,7 +227,7 @@ Result dijkstra(Graph& g, string startName, string targetName) {
         reversedPath.push_back(current);
         current = parent[current];
     }
-    for (int i  = reversedPath.size() -1 ; i >= 0; i--) {
+    for (int i = reversedPath.size() - 1; i >= 0; i--) {
         result.path.push_back(reversedPath[i]);
     }
     return result;
@@ -292,7 +293,9 @@ int main(int argc, char* argv[]) {
         string line;
         while(getline(fin, line)) {
             line = trim(line);
-            if (line.empty()) {continue;}
+            if (line.empty()) {
+                continue;
+            }
             if (isOnlyInt(line)) {
                 graphs[i + 1].numVertex = stoi(line);
                 break;
@@ -304,22 +307,19 @@ int main(int argc, char* argv[]) {
             Edge e;
             e.start = trim(line.substr(0, pos1));
             e.end = trim(line.substr(pos1 + 1, pos2 - pos1 - 1));
-            e.travelTime = stoi(trim(line.substr(pos2 + 1)));
+            e.travelTime = stoi(trim(line.substr(pos2 + 1))); 
 
             graphs[i].edgesHolder.push_back(e);
         }
     }
     for(int i = 0; i < numGraph; i++) {
-        string start = graphs[i].vertices[0].name;
-        string target = graphs[i].vertices[graphs[i].numVertex - 1].name;
         bool isLastGraph = (i == numGraph - 1);
-        Result result = dijkstra(graphs[i], start, target);
+        Result result = dijkstra(graphs[i], "A", "G");
         
         printResult(graphs[i], result, fout, isLastGraph);
         printResult(graphs[i], result, cout, isLastGraph);
     }
 
-    
     fin.close();
     fout.close();
     return 0;
