@@ -313,8 +313,10 @@ int main(int argc, char* argv[]) {
         }
     }
     for(int i = 0; i < numGraph; i++) {
+        string start = graphs[i].vertices[0].name;
+        string target = graphs[i].vertices[graphs[i].numVertex - 1].name;
         bool isLastGraph = (i == numGraph - 1);
-        Result result = dijkstra(graphs[i], "A", "G");
+        Result result = dijkstra(graphs[i], start, target);
         
         printResult(graphs[i], result, fout, isLastGraph);
         printResult(graphs[i], result, cout, isLastGraph);
